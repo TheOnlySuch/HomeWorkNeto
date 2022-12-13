@@ -36,6 +36,12 @@ class Student:
     def __str__(self):
         res = f'Имя: {self.name} \nФамилия: {self.surname}\nСредняя оценка: {self.ave_score()}\nКурсы в процессе изучения: {",".join(self.courses_in_progress)}\nЗавершенные курсы: {",".join(self.finished_courses)}'
         return res
+
+    def __lt__(self, student):
+        if not isinstance(student, Student):
+            print(f'Такого студента нет')
+            return
+        return self.ave_score() < student.ave_score()
         
 
 class Mentor:
@@ -68,6 +74,11 @@ class Lecturer(Mentor):
         res = f'Имя: {self.name} \nФамилия: {self.surname}\nСредняя оценка: {self.ave_score()}'
         return res
 
+    def __lt__(self, lecturer):
+        if not isinstance(lecturer, Lecturer):
+            print(f' Такого лектора нет')
+            return
+        return self.ave_score() < lecturer.ave_score()
 
 class Reviewer(Mentor):
     def rate_hw(self, student, course, grade):  
@@ -152,7 +163,7 @@ low_student.estimation('Java', lector_thor, 4)
 
 
 print(f"на курсе учатся {len(Student.instances)} студента(ов)")
-print(f"на курсе учатся {len(Lecturer.instances)} студента(ов)")
+print(f"на курсе Преподают{len(Lecturer.instances)} лектора(ов)")
 print()
 print(low_reviewer.__str__())
 print()
