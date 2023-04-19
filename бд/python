@@ -86,7 +86,7 @@ def find_client(conn, first_name=None, last_name=None, email=None, phone=None):
         results = cursor.fetchall()
     return results
 
-with psycopg2.connect(database="hwbd", user="postgres", password="afhnreh23") as conn:
+with psycopg2.connect(database="hwbd", user="postgres", password="password") as conn:
     with conn.cursor() as cur:
         cur.execute("""
         DROP TABLE clients
