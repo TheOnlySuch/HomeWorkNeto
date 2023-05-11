@@ -1,109 +1,89 @@
 import psycopg2
 
-def create_db(conn):
-    with conn.cursor() as cursor:
-        cursor.execute('''
-        create table clients(
-        id serial primary key,
-        first_name varchar(64) not null,
-        last_name varchar(64) not null,
-        email varchar(128) not null,
-        phones varchar(50) default '{}')''')
-        conn.commit()
 
-def add_client(conn, first_name, last_name, email, phones=None):
-    with conn.cursor() as cursor:
-        cursor.execute('''
-        insert into clients (first_name, last_name, email, phones)
-        values(%s, %s, %s, %s) returning id
-        ''', (first_name, last_name, email, phones))
-        client_id = cursor.fetchone()[0]
-        conn.commit()
+def create_db(cur):
+    cur.execute('''
+    DROP TABLE clients;
+    
+    create table clients(
+    id serial primary key,
+    first_name varchar(64) not null,
+    last_name varchar(64) not null,
+    email varchar(128) not null);
+    
+    create table phones(
+    id serial primary key,
+    client_id integer references clients(id),
+    phone varchar(20));''')
+
+def add_client(cur, first_name, last_name, email, phones=None):
+    cur.execute('''  
+    insert into clients (first_name, last_name, email)
+    values(%s, %s, %s)returning id;''', (first_name, last_name, email))
+    client_id = cur.fetchone()[0]
+    cur.execute('''
+    insert into phones(client_id, phone)
+    values (%s, %s);''', (client_id, phones))
     return client_id
 
-def add_phone(conn, client_id, phone):
-    with conn.cursor() as cursor:
-        cursor.execute('''
-        UPDATE clients
-        SET phones = %s
-        WHERE id = %s
-        ''', (phone, client_id))
-        conn.commit()
 
-def change_client(conn, client_id, first_name=None, last_name=None, email=None, phones=None):
-    with conn.cursor() as cursor:
-        query = 'UPDATE clients SET '
-        args = []
-        if first_name is not None:
-            query += 'first_name = %s, '
-            args.append(first_name)
-        if last_name is not None:
-            query += 'last_name = %s, '
-            args.append(last_name)
-        if email is not None:
-            query += 'email = %s, '
-            args.append(email)
-        if phones is not None:
-            query += 'phones = %s, '
-            args.append(phones)
-        query = query[:-2]
-        query += ' WHERE id = %s'
-        args.append(client_id)
-        cursor.execute(query, args)
-        conn.commit()
+def add_phone(cur, client_id, phone):
+    cur.execute('''
+    insert into phones(client_id, phone)
+    values (%s, %s);''', (client_id, phone))
 
-def delete_phone(conn, client_id, phone):
-    with conn.cursor() as cursor:
-        cursor.execute('''
-        UPDATE clients
-        SET phones =  %s
-        WHERE id = %s
-        ''', (phone, client_id))
 
-def delete_client(conn, client_id):
-    with conn.cursor() as cursor:
-        cursor.execute('DELETE FROM clients WHERE id = %s', (client_id,))
-        conn.commit()
+def change_client(cur, client_id, first_name=None, last_name=None, email=None, phones=None):
+    def cutt(item, change):
+        cur.execute('''
+        update clients
+        set %s = %s
+        where id = %s
+        ''', (item, change, client_id))
+    if first_name is not None:
+        cutt('first_name', first_name)
+    if last_name is not None:
+        cutt('last_name', last_name)
+    if email is not None:
+        cutt('email', email)
 
-def find_client(conn, first_name=None, last_name=None, email=None, phone=None):
-    with conn.cursor() as cursor:
-        query = 'SELECT * FROM clients WHERE '
-        args = []
-        if first_name is not None:
-            query += 'first_name = %s AND '
-            args.append(first_name)
-        if last_name is not None:
-            query += 'last_name = %s AND '
-            args.append(last_name)
-        if email is not None:
-            query += 'email = %s AND '
-            args.append(email)
-        if phone is not None:
-            query += '%s = ANY(phones) AND '
-            args.append(phone)
-        query = query[:-5]  # remove ' AND ' from the end
-        cursor.execute(query, args)
-        results = cursor.fetchall()
+
+def delete_phone(cur, client_id, phone):
+    cur.execute('''
+    delete from phones
+    where phone = %s and client_id = %s''', (phone, client_id))
+
+def delete_client(cur, client_id):
+    cur.execute('''
+    delete from phones where client_id = %s;
+    
+    DELETE FROM clients WHERE id = %s;''', (client_id, client_id))
+
+def find_client(cur, first_name=None, last_name=None, email=None, phone=None):
+    cur.execute('''
+    select * from clients
+    join phones on clients.id = phones.client_id
+    where first_name = %s or last_name = %s or email = %s or phones.client_id = %s;''', (first_name, last_name, email, phone))
+    results = cur.fetchall()
     return results
 
-with psycopg2.connect(database="hwbd", user="postgres", password="password") as conn:
+if __name__ == "__main__":
+    conn = psycopg2.connect(database="hwbd", user="postgres", password="password")
     with conn.cursor() as cur:
-        cur.execute("""
-        DROP TABLE clients
-        """)
-    create_db(conn)
-    client1_id = add_client(conn, 'John', 'Doe', 'johndoe@example.com', phones=['123-456-7890', '987-654-3210'])
-    client2_id = add_client(conn, 'Jane', 'Doe', 'janedoe@example.com')
+        create_db(cur)
 
-    add_phone(conn, client2_id, '555-555-5555')
+        client1_id = add_client(cur, 'John', 'Doe', 'johndoe@example.com', phones='987-873-33-11')
+        client2_id = add_client(cur, 'Jane', 'Doy', 'janedoy@example.com')
 
-    change_client(conn, client1_id, last_name='Smith', phones=['555-1212'])
+        add_phone(cur, client2_id, '555 - 555 - 5555')
+        add_phone(cur, client1_id, '555 - 555 - 2222')
 
-    delete_phone(conn, client1_id, '123-456-7890')
+        change_client(cur, client1_id, last_name='Smith', phones='555 - 1212')
 
-    delete_client(conn, client2_id)
+        delete_phone(cur, client1_id, '987-873-33-11')
 
-    results = find_client(conn, last_name='Smith')
+        delete_client(cur, client2_id)
+
+        results = find_client(cur, last_name='Smith')
     print(results)
-
-conn.close()
+    conn.close()
