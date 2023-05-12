@@ -3,7 +3,8 @@ import psycopg2
 
 def create_db(cur):
     cur.execute('''
-    DROP TABLE clients;
+    DROP TABLE if exists clients;
+    DROP TABLE if exists phones;
     
     create table clients(
     id serial primary key,
@@ -34,18 +35,30 @@ def add_phone(cur, client_id, phone):
 
 
 def change_client(cur, client_id, first_name=None, last_name=None, email=None, phones=None):
-    def cutt(item, change):
+    if first_name is not None:
         cur.execute('''
         update clients
-        set %s = %s
+        set first_name = %s
         where id = %s
-        ''', (item, change, client_id))
-    if first_name is not None:
-        cutt('first_name', first_name)
+        ''', (first_name, client_id))
     if last_name is not None:
-        cutt('last_name', last_name)
+        cur.execute('''
+        update clients
+        set last_name = %s
+        where id = %s
+        ''', (last_name, client_id))
     if email is not None:
-        cutt('email', email)
+        cur.execute('''
+        update clients
+        set email = %s
+        where id = %s
+        ''', (email, client_id))
+    if phones is not None:
+        cur.execute('''
+        update phones
+        set phone = %s
+        where id = %s
+        ''', (phones, client_id))
 
 
 def delete_phone(cur, client_id, phone):
@@ -68,7 +81,7 @@ def find_client(cur, first_name=None, last_name=None, email=None, phone=None):
     return results
 
 if __name__ == "__main__":
-    conn = psycopg2.connect(database="hwbd", user="postgres", password="password")
+    conn = psycopg2.connect(database="hwbd", user="postgres", password="afhnreh23")
     with conn.cursor() as cur:
         create_db(cur)
 
@@ -85,5 +98,5 @@ if __name__ == "__main__":
         delete_client(cur, client2_id)
 
         results = find_client(cur, last_name='Smith')
-    print(results)
+        print(results)
     conn.close()
