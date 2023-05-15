@@ -81,7 +81,7 @@ def find_client(cur, first_name=None, last_name=None, email=None, phone=None):
     return results
 
 if __name__ == "__main__":
-    conn = psycopg2.connect(database="hwbd", user="postgres", password="afhnreh23")
+    conn = psycopg2.connect(database="hwbd", user="postgres", password="")
     with conn.cursor() as cur:
         create_db(cur)
 
